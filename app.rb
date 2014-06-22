@@ -50,14 +50,14 @@ get '/course_data.csv' do
   @course_id = params[:course_id]
 
   @course = api_request "/courses/#{@course_id}"
-  @students = api_request "/courses/#{@course_id}/users"
+  @students = api_request "/courses/#{@course_id}/students"
 
 
   content_type 'application/csv'
   attachment "#{@course['name']}.csv"
 
   CSV.generate do |csv|
-    csv << ['Student Name', 'Page Views']
+    csv << ['Student', 'Page Views']
     @students.each do |student|
 
       student_activity = api_request "/courses/#{@course_id}/analytics/users/#{student['id']}/activity"
