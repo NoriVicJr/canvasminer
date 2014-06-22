@@ -1,5 +1,2 @@
 # Ignore bundler config.
 /.bundle
-
-# Ignore gemfile lock
-Gemfile.lock
