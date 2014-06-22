@@ -1,0 +1,9 @@
+%form{ action: "/set_account", method: :post }
+  .form-group
+    %label{ for: "account"} Account
+    %select.form-control{ id: 'account', name: 'account_id' }
+      - for account in @accounts
+        %option{ value: account['id'] }
+          = account['name']
+
+  %button.btn.btn-default.btn-block{ type: "submit" } Get Courses

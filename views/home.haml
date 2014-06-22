@@ -1,0 +1,17 @@
+-if @message
+  .alert.alert-warning
+    =@message
+
+
+%form{ action: "/set_url_and_token", method: "post"}
+  .form-group
+    %label{ for: "canvas_url"} Canvas url
+    %input.form-control#canvas_url{ name: "canvas_url", placeholder: 'demo.drieam.nl', value: @canvas_url }
+
+  .form-group
+    %label{ for: "access_token"} Access Token
+    %input.form-control#access_token{ name: "access_token", value: @access_token }
+    %p.help-block Get your access token from <canvas_url>/profile/settings under approved integrations.
+
+
+  %button.btn.btn-default.btn-block{ type: "submit" } Get Accounts

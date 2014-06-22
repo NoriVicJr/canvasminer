@@ -1,0 +1,10 @@
+%form{ action: "/course_data.csv", method: :get }
+  .form-group
+    %label{ for: "course"} Course
+    %select.form-control{ id: 'course', name: 'course_id' }
+      - for course in @courses
+        %option{ value: course['id'] }
+          = course['name']
+
+  %button.btn.btn-default.btn-block{ type: "submit" } Get Course Info
+  %p.help-block Please only click once, it can take a while...
