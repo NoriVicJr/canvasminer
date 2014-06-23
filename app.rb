@@ -58,50 +58,58 @@ get '/course_data.csv' do
 
   content_type 'application/csv'
 
-  CSV.generate do |csv|
-    csv << ['Student id', 'Student Name', 'Student Sortable Name', 'Student Short Name', 'Student Login Id', 'Course Page Views']
+  @users = api_request "/courses/#{@course_id}/users"
+  @course_summary = api_request "/courses/#{@course_id}/analytics/student_summaries"
 
-    # Get the students list
-    students_request = typhoeus_request "/courses/#{@course_id}/students"
-    students_request.on_success do |students_response|
+  CSV.generate(col_sep: ";") do |csv|
+    csv << ['Student id', 'Student Name', 'Student Sortable Name', 'Student Short Name', 'Student Login Id', 'Course Page Views', 'Course Participations', 'Instructor Messages', 'Student Messages']
+    # Initialize parallel requests
+    hydra = Typhoeus::Hydra.new
 
-      # Extract students
-      students = JSON.parse students_response.response_body
+    # Loop trough users
+    @course_summary.each do |student_summary|
+      # Get the student's communication summary
+      hydra.queue student_cummunication_request = typhoeus_request("/courses/#{@course_id}/analytics/users/#{student_summary['id']}/communication", body: { student_id: student_summary['id'] })
 
-      # Initialize parallel requests
-      hydra = Typhoeus::Hydra.new
-
-      # Queue: Get the course info
-      hydra.queue course_request = typhoeus_request("/courses/#{@course_id}")
-      course_request.on_success{ |course_response| attachment("#{JSON.parse(course_response.body)['name']}.csv")}
-
-      # Loop all students from course
-      for student in students
-        # Get the student's activity
-        hydra.queue student_activity_request = typhoeus_request("/courses/#{@course_id}/analytics/users/#{student['id']}/activity", body: { student: student })
-
-        # Response callback
-        student_activity_request.on_success do |student_activity_response|
-          student = student_activity_response.request.original_options[:body][:student]
-
-          # Extract activity
-          student_activity = JSON.parse student_activity_response.response_body
-
-          # Exctract the page views
-          student_page_views = student_activity['page_views'].values.inject(:+) if student_activity['page_views']
-          student_page_views ||= 0
-
-          # Fill the csv file
-          puts "Data for student #{student['id']} added to csv"
-          csv << [student['id'], student['name'], student['sortable_name'], student['short_name'], student['login_id'], student_page_views]
+      student_cummunication_request.on_success do |student_communication_response|
+        # Extract cummunication
+        student_communication = JSON.parse student_communication_response.response_body
+        instructorMessages = 0
+        studentMessages = 0
+        student_communication.values.each do |hash|
+          instructorMessages += hash['instructorMessages'].to_i
+          studentMessages += hash['studentMessages'].to_i
         end
+
+        # Get student_id from original request
+        student_id = student_communication_response.request.original_options[:body][:student_id]
+
+        # Get student
+        student = @users.select{|user| user['id'] == student_id }.first
+
+        # Get student's course_summary
+        student_summary = @course_summary.select{ |user| user['id'] == student_id }.first
+
+        # Fill the csv file
+        puts "-----> Data for student #{student_id} added to csv"
+        # puts "Student: #{student}"
+        # puts "Summary: #{student_summary}"
+        # puts "Communi: #{student_communication}"
+        # puts "Instruc: #{instructorMessages}"
+        # puts "Student: #{studentMessages}"
+
+        csv << [student['id'], student['name'], student['sortable_name'], student['short_name'], student['login_id'], student_summary['page_views'], student_summary['participations'], instructorMessages, studentMessages] if student && student_summary && student_communication
       end
 
-      # Execute the requests
-      hydra.run
 
+
+      # # Fill the csv file
+      # puts "Data for student #{student['id']} added to csv"
+      # csv << [student['id'], student['name'], student['sortable_name'], student['short_name'], student['login_id'], student_summary['page_views']]
     end
-    students_request.run
+
+    # Execute the requests
+    hydra.run
   end
 
 end
