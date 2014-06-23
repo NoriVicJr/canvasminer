@@ -133,7 +133,7 @@ def typhoeus_request(path, options = {})
   begin
     request = Typhoeus::Request.new "https://#{@canvas_url}/api/v1#{path}", headers: { Authorization: "Bearer #{@access_token}" }, body: options[:body]
     request.on_failure do |response|
-      @message = "<b>Canvas rejected the request, probably not authorized.</b> <br>Response: #{response}"
+      @message = "<b>Canvas rejected the request, probably not authorized.</b> <br>Response: #{Rack::Utils.escape_html(response)}"
       haml :home
     end
     return request
