@@ -56,9 +56,10 @@ get '/course_data.csv' do
   @access_token = session[:access_token]
   @course_id = params[:course_id]
 
-  # content_type 'application/csv'
+  content_type 'application/csv'
+  @course = api_request "/courses/#{@course_id}"
+  attachment("#{@course['name']}.csv")
 
-  @student_activities = []
   @users = api_request "/courses/#{@course_id}/students"
 
   # Initialize parallel requests
