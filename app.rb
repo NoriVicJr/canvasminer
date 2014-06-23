@@ -38,6 +38,12 @@ post '/set_account' do
   redirect '/courses'
 end
 
+get '/clear' do
+  session.clear
+  @message = "Settings cleared from cookies"
+  redirect '/'
+end
+
 
 get '/courses' do
   @canvas_url = session[:canvas_url]

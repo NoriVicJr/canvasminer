@@ -6,7 +6,10 @@
     %link{ rel: "stylesheet", href: "//maxcdn.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" }
   %body
     .container
-      %h1 Canvas Data Miner
+      %h1
+        Canvas Data Miner
+        %small
+          %a{href: '/clear'} Clear settings
       -if @message
         .alert.alert-warning
           =@message
