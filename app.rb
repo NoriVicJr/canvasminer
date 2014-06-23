@@ -25,7 +25,11 @@ get '/accounts' do
   @canvas_url = session[:canvas_url]
   @access_token = session[:access_token]
   @accounts = api_request '/accounts'
-  haml :accounts
+  if @accounts.class.to_s != 'String'
+    haml :accounts
+  else
+    haml :home
+  end
 end
 
 post '/set_account' do
@@ -40,8 +44,11 @@ get '/courses' do
   @access_token = session[:access_token]
   @account_id = session[:account_id]
   @courses = api_request "/accounts/#{@account_id}/courses"
-
-  haml :courses
+  if @courses.class.to_s != 'String'
+    haml :courses
+  else
+    haml :home
+  end
 end
 
 get '/course_data.csv' do
@@ -52,7 +59,7 @@ get '/course_data.csv' do
   content_type 'application/csv'
 
   CSV.generate do |csv|
-    csv << ['Student', 'Page Views']
+    csv << ['Student id', 'Student Name', 'Student Sortable Name', 'Student Short Name', 'Student Login Id', 'Course Page Views']
 
     # Get the students list
     students_request = typhoeus_request "/courses/#{@course_id}/students"
@@ -85,7 +92,8 @@ get '/course_data.csv' do
           student_page_views ||= 0
 
           # Fill the csv file
-          csv << [student['name'], student_page_views]
+          puts "Data for student #{student['id']} added to csv"
+          csv << [student['id'], student['name'], student['sortable_name'], student['short_name'], student['login_id'], student_page_views]
         end
       end
 
@@ -99,7 +107,7 @@ get '/course_data.csv' do
 end
 
 def typhoeus_request(path, options = {})
-  puts "#{@canvas_url}/api/v1#{path}"
+  puts "Typhoeus requesting: #{@canvas_url}/api/v1#{path}"
   begin
     request = Typhoeus::Request.new "https://#{@canvas_url}/api/v1#{path}", headers: { Authorization: "Bearer #{@access_token}" }, body: options[:body]
     request.on_failure do |response|
@@ -114,17 +122,14 @@ def typhoeus_request(path, options = {})
 end
 
 def api_request(path)
-  puts "#{@canvas_url}/api/v1#{path}"
+  puts "Single request: #{@canvas_url}/api/v1#{path}"
   begin
     RestClient.get "https://#{@canvas_url}/api/v1#{path}?access_token=#{@access_token}" do |response, request, result, &block|
-      puts "RESPONSE: #{response.code}"
       if response.code != 200
-        puts "Yay"
         @message = "<b>Canvas rejected the request, probably not authorized.</b> <br>Response: #{response}"
         haml :home
-        break
       else
-        puts response
+        # puts response
         return JSON.parse(response)
       end
     end
