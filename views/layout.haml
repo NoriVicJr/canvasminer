@@ -7,4 +7,7 @@
   %body
     .container
       %h1 Canvas Data Miner
+      -if @message
+        .alert.alert-warning
+          =@message
       = yield

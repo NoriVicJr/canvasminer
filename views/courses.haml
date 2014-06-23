@@ -1,3 +1,10 @@
+%ol.breadcrumb
+  %li
+    %a{ href: "/"} Settings
+  %li
+    %a{ href: "/accounts"} Accounts
+  %li.active Courses
+
 %form{ action: "/course_data.csv", method: :get }
   .form-group
     %label{ for: "course"} Course
