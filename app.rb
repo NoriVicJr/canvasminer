@@ -25,7 +25,11 @@ get '/accounts' do
   @canvas_url = session[:canvas_url]
   @access_token = session[:access_token]
   @accounts = api_request '/accounts'
-  haml :accounts
+  if @accounts.class.to_s != 'String'
+    haml :accounts
+  else
+    haml :home
+  end
 end
 
 post '/set_account' do
@@ -40,8 +44,11 @@ get '/courses' do
   @access_token = session[:access_token]
   @account_id = session[:account_id]
   @courses = api_request "/accounts/#{@account_id}/courses"
-
-  haml :courses
+  if @courses.class.to_s != 'String'
+    haml :courses
+  else
+    haml :home
+  end
 end
 
 get '/course_data.csv' do
@@ -49,33 +56,73 @@ get '/course_data.csv' do
   @access_token = session[:access_token]
   @course_id = params[:course_id]
 
-  @course = api_request "/courses/#{@course_id}"
-  @students = api_request "/courses/#{@course_id}/students"
-
-
   content_type 'application/csv'
-  attachment "#{@course['name']}.csv"
 
   CSV.generate do |csv|
-    csv << ['Student', 'Page Views']
-    @students.each do |student|
+    csv << ['Student id', 'Student Name', 'Student Sortable Name', 'Student Short Name', 'Student Login Id', 'Course Page Views']
 
-      student_activity = api_request "/courses/#{@course_id}/analytics/users/#{student['id']}/activity"
+    # Get the students list
+    students_request = typhoeus_request "/courses/#{@course_id}/students"
+    students_request.on_success do |students_response|
 
-      student_page_views = student_activity['page_views'].values.inject(:+) if student_activity['page_views']
-      student_page_views ||= 0
+      # Extract students
+      students = JSON.parse students_response.response_body
 
-      csv << [student['name'], student_page_views]
+      # Initialize parallel requests
+      hydra = Typhoeus::Hydra.new
+
+      # Queue: Get the course info
+      hydra.queue course_request = typhoeus_request("/courses/#{@course_id}")
+      course_request.on_success{ |course_response| attachment("#{JSON.parse(course_response.body)['name']}.csv")}
+
+      # Loop all students from course
+      for student in students
+        # Get the student's activity
+        hydra.queue student_activity_request = typhoeus_request("/courses/#{@course_id}/analytics/users/#{student['id']}/activity", body: { student: student })
+
+        # Response callback
+        student_activity_request.on_success do |student_activity_response|
+          student = student_activity_response.request.original_options[:body][:student]
+
+          # Extract activity
+          student_activity = JSON.parse student_activity_response.response_body
+
+          # Exctract the page views
+          student_page_views = student_activity['page_views'].values.inject(:+) if student_activity['page_views']
+          student_page_views ||= 0
+
+          # Fill the csv file
+          puts "Data for student #{student['id']} added to csv"
+          csv << [student['id'], student['name'], student['sortable_name'], student['short_name'], student['login_id'], student_page_views]
+        end
+      end
+
+      # Execute the requests
+      hydra.run
 
     end
+    students_request.run
   end
 
 end
 
-
+def typhoeus_request(path, options = {})
+  puts "Typhoeus requesting: #{@canvas_url}/api/v1#{path}"
+  begin
+    request = Typhoeus::Request.new "https://#{@canvas_url}/api/v1#{path}", headers: { Authorization: "Bearer #{@access_token}" }, body: options[:body]
+    request.on_failure do |response|
+      @message = "<b>Canvas rejected the request, probably not authorized.</b> <br>Response: #{response}"
+      haml :home
+    end
+    return request
+  rescue
+    @message = "Could not create a valid request..."
+    haml :home
+  end
+end
 
 def api_request(path)
-  puts "#{@canvas_url}/api/v1#{path}"
+  puts "Single request: #{@canvas_url}/api/v1#{path}"
   begin
     RestClient.get "https://#{@canvas_url}/api/v1#{path}?access_token=#{@access_token}" do |response, request, result, &block|
       if response.code != 200

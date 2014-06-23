@@ -17,3 +17,6 @@ gem 'rest-client', '~> 1.6.7'
 
 # Parse Json
 gem 'json', '~> 1.8.1'
+
+# Parallel http requests
+gem 'typhoeus', '~> 0.6.8'
