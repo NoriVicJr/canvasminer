@@ -58,7 +58,22 @@ get '/course_data.csv' do
 
   content_type 'application/csv'
 
-  @users = api_request "/courses/#{@course_id}/users"
+  @users = api_request "/courses/#{@course_id}/students"
+
+  # Get the students list
+  # students_request = typhoeus_request "/courses/#{@course_id}/students"
+  # students_request.on_success do |students_response|
+  #
+  #   # Extract students
+  #   users = JSON.parse students_response.response_body
+  #   puts "-----------------"
+  #   puts users
+  #   puts "-----------------"
+  #   puts @users
+  #   puts "-----------------"
+  # end
+  # students_request.run
+
   @course_summary = api_request "/courses/#{@course_id}/analytics/student_summaries"
 
   CSV.generate(col_sep: ";") do |csv|
