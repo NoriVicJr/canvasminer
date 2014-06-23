@@ -41,7 +41,7 @@ end
 get '/clear' do
   session.clear
   @message = "Settings cleared from cookies"
-  redirect '/'
+  haml :home
 end
 
 
